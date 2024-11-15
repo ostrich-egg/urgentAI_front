@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { FaMicrophone } from "react-icons/fa6";
-import { users, data } from '@/lib/database/db'
+import { users, data } from '@/lib/database/dummy_db'
 import dynamic from 'next/dynamic';
 
 
@@ -35,10 +35,11 @@ function page() {
 
     function handleSpeechRecognition(target_elm: any) {
 
-        if (typeof window == undefined) {
-            console.log("Speech recogination can only run on client. Error occured")
-            return;
-        }
+        // if (typeof window == undefined) {
+        //     console.log("Speech recogination can only run on client. Error occured")
+        //     return;
+        // }
+
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
             alert("Speech Recognition is not supported in this browser. Try different, like Google Chrome.");

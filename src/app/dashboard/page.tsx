@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import get_image from "@/lib/location_api";
 import Image from "next/image";
 import { forwardGeoCoding } from "@/lib/geoCoding";
-import { data, users } from "@/lib/database/db"
+import { data, users } from "@/lib/database/dummy_db"
 
 import MapDynamic from "@/ui/index";
 
