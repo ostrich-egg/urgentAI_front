@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { FaMicrophone } from "react-icons/fa6";
 import { users, data } from '@/lib/database/db'
 import dynamic from 'next/dynamic';
@@ -12,7 +12,6 @@ declare global {
         webkitSpeechRecognition: any;
     }
 }
-
 function page() {
 
     type Message = {
@@ -23,6 +22,7 @@ function page() {
     const [MessageArray, setMessageArray] = useState<Message[]>([]);
     const [recognizing, setRecognizing] = useState<boolean>(false);
     const micRef = useRef<HTMLDivElement>(null);
+    const [isClient, setIsClient] = useState<boolean>(false);
 
 
     // const socket = new WebSocket("https://localhost:7878/chat");
@@ -68,7 +68,7 @@ function page() {
         recognition.onspeechend = function () {
             console.log("recognition end");
             recognition.stop();
-            // target_elm.querySelector(".mic_itself")?.classList.remove("animate-bounce");
+            target_elm.querySelector(".mic_itself")?.classList.remove("animate-bounce");
             micRef.current?.classList.remove("animate-bounce");
             setRecognizing(false);
         }
@@ -81,7 +81,7 @@ function page() {
 
     function handleMicVoice(event: any) {
         event.preventDefault();
-        // event.target.querySelector(".mic_itself")?.classList.add("animate-bounce");
+        event.target.querySelector(".mic_itself")?.classList.add("animate-bounce");
         micRef.current?.classList.add("animate-bounce");
         handleSpeechRecognition(event.target);
     };
@@ -97,7 +97,11 @@ function page() {
         setMessages("");
     };
 
-    return (
+    useEffect(() => {
+        setIsClient(true);
+    }, [])
+
+    return isClient && (
         <div className='flex justify-center items-center h-full w-full'>
             <div className="mr-5  p-5 w-[50vw] text-foreground border-2 border-slate-50 h-screen rounded-md bg-red-50 flex flex-col gap-7 shadow-md relative">
 
@@ -126,7 +130,7 @@ function page() {
                             <FaMicrophone className='mic_itself' />
                         </div>
                     </div>
-                    <form action="" onSubmit={handleButtonClicked} className='flex justify-between items-center w-full relative px-5'>
+                    <form id="form" name="id" action="" onSubmit={handleButtonClicked} className='flex justify-between items-center w-full relative px-5'>
                         <input
                             className="w-full bg-slate-300 border rounded-md p-2  mb-2   bottom-0 left-0"
                             type="text"
