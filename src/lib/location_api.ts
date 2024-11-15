@@ -32,5 +32,7 @@ export default async function get_image(place: string) {
 
     } catch (error) {
 
+        console.log("error occured in wikipedia loading", error);
+
     }
 }

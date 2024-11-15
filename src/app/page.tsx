@@ -4,12 +4,21 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import siren from "../../public/siren.png"
 
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+import { NavBar } from "@/components/NavBar";
+import { Banner } from "@/components/Banner";
+import  NewsSlider  from "@/components/NewsSlider";
+
 export default function Home() {
 
   const router = useRouter();
   return (
-    <div className={` flex justify-center items-center flex-col bg-secondary w-full h-[100vh] text-foreground p-10 gap-1`}>
-
+<div>
+    {/*<div className={` flex justify-center items-center flex-col bg-secondary w-full h-[100vh] text-foreground p-10 gap-1`}>*/}
+      <NavBar />
+      <Banner />
+      {/*
       <Image
         width={350}
         height={350}
@@ -18,6 +27,7 @@ export default function Home() {
         className="object-cover absolute top-0"
 
       />
+      */}
       <h1 className=" font-medium text-9xl pt-20">urgent AI</h1>
       <p className="text-3xl">Emergency helping service</p>
 

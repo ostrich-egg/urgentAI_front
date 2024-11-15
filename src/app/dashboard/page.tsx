@@ -15,15 +15,15 @@ type Position = {
 export default function Page() {
     const [clickedId, setClickedId] = useState<number>(1);
     const [open, setOpen] = useState<boolean>(false);
-    const [imagelink, setImagelink] = useState<string>();
+    const [imagelink, setImagelink] = useState<string>("");
     const [location, setLocation] = useState<string>("Nepali");
     const [position, setPosition] = useState<Position>({ lat: 0, lng: 0 });
 
     useEffect(() => {
         async function get() {
-            let r = await get_image(location)
-            setImagelink(r);
-            let { lat, lng } = await forwardGeoCoding(location);
+            const r  = await get_image(location)
+            setImagelink(r as string);
+            const { lat, lng } = await forwardGeoCoding(location);
             setPosition({ lat, lng })
         }
         get()
@@ -48,7 +48,7 @@ export default function Page() {
                             className="actual_div border-2 px-5 py-2 rounded-md shadow-sm flex justify-between items-center"
                             key={`${each_data.id}`}
                             id={`${each_data.id}`}
-                            onClick={(_) => {
+                            onClick={() => {
                                 setClickedId(each_data.id)
                                 console.log("location is ", users.filter(user => user.id == each_data.id)[0].location)
                                 setLocation(users.filter(user => user.id == each_data.id)[0].location)
