@@ -18,5 +18,7 @@
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.096);
     overflow-y: auto; /* Enable scrolling if content exceeds height */
+    -webkit-overflow-scrolling: none;
+
 }
 

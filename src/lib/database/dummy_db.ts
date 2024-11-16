@@ -8,6 +8,24 @@ type data = {
 }
 
 
+declare global {
+    interface DataItem {
+        messages?: Array<{
+            message?: string;
+            author?: string;
+            audio?: string | null;
+            sequence: number;
+            sent_at: number;
+        }> | null;
+        located_at: string | null;
+        session_id: string;
+        unrated?: boolean;
+        average_severity?: number;
+        short_description?: string;
+        description?: string;
+    }
+}
+
 export async function get_all_data() {
 
     // const response = await fetch("/url", { "method": "GET", });
@@ -121,7 +139,9 @@ export async function get_all_data() {
 
 
 
-export async function get_data_with_id(id: number) {
+
+
+export async function get_data_with_id(id: string) {
 
     // const response = await fetch("/url/id=id", { "method": "GET" });
     // const data = await response.json();
@@ -229,54 +249,56 @@ export async function get_data_with_id(id: number) {
         }
     ]
 
-    return data.find(each => each.id == id)
+    return data.find(each => each.session_id == id)
 
 }
 
 
 export async function get_all_initial_info() {
 
-    // const response = await fetch("/url/getall", { "method": "GET", });
-    // const data = await response.json();
+    const response = await fetch("https://brave-titmouse-primary.ngrok-free.app/recorded-data", { "method": "GET", });
+    const data = await response.json();
 
-    const data = [
-        {
-            "id": 1,
-            "short_description": "Child Lost",
-            "located_at": {
-                "latitude": 27.7172,
-                "longitude": 85.3240
-            },
-            "tasks": [{
-                "action": "CALL",
-                "payload": "1098",
-            }],
-            "time": 1504095567183,
-            "average_serverity": 2,
-        },
-        {
-            "id": 2,
-            "short_description": "Theft",
-            "located_at": {
-                "latitude": 28.2096,
-                "longitude": 83.9856
-            },
-            "tasks": [],
-            "time": 1504095567183,
-            "average_serverity": 8,
-        },
-        {
-            "id": 3,
-            "short_description": "Landslide",
-            "located_at": {
-                "latitude": 26.4550,
-                "longitude": 87.2701
-            },
-            "tasks": [],
-            "time": 150495567183,
-            "average_serverity": 9,
-        },
-    ]
+    console.log("data is ", data);
+
+    // const data = [
+    //     {
+    //         "id": 1,
+    //         "short_description": "Child Lost",
+    //         "located_at": {
+    //             "latitude": 27.7172,
+    //             "longitude": 85.3240
+    //         },
+    //         "tasks": [{
+    //             "action": "CALL",
+    //             "payload": "1098",
+    //         }],
+    //         "time": 1504095567183,
+    //         "average_serverity": 2,
+    //     },
+    //     {
+    //         "id": 2,
+    //         "short_description": "Theft",
+    //         "located_at": {
+    //             "latitude": 28.2096,
+    //             "longitude": 83.9856
+    //         },
+    //         "tasks": [],
+    //         "time": 1504095567183,
+    //         "average_serverity": 8,
+    //     },
+    //     {
+    //         "id": 3,
+    //         "short_description": "Landslide",
+    //         "located_at": {
+    //             "latitude": 26.4550,
+    //             "longitude": 87.2701
+    //         },
+    //         "tasks": [],
+    //         "time": 150495567183,
+    //         "average_serverity": 9,
+    //     },
+    // ]
     return data;
 }
 
@@ -315,5 +337,69 @@ export const users = [
             { sender: "Chatbot", message: "Who is involved?", time: "6:10pm" },
             { sender: "User", message: "The key individuals are John and Jane.", time: "6:11pm" },
         ]
+    }
+];
+
+
+
+declare global {
+    type PoliceStation = {
+        located_at: {
+            location: string
+            lat: number;
+            lng: number;
+        };
+    };
+}
+
+export const policeStations: PoliceStation[] = [
+    {
+        located_at: {
+            location: "Biratnagar",
+            lat: 26.4550, // Biratnagar
+            lng: 87.2701
+        }
+    },
+    {
+        located_at: {
+            location: "Janakpur",
+            lat: 26.6950, // Janakpur
+            lng: 85.8988
+        }
+    },
+    {
+        located_at: {
+            location: "Kathmandu",
+            lat: 27.7172, // Kathmandu
+            lng: 85.3240
+        }
+    },
+    {
+        located_at: {
+            location: "Pokhara",
+            lat: 28.2096, // Pokhara
+            lng: 83.9856
+        }
+    },
+    {
+        located_at: {
+            location: "Butwal",
+            lat: 27.6954, // Butwal
+            lng: 83.4427
+        }
+    },
+    {
+        located_at: {
+            location: "Dhangadhi",
+            lat: 29.6824, // Dhangadhi
+            lng: 80.5689
+        }
+    },
+    {
+        located_at: {
+            location: "Mahendranagar",
+            lat: 29.3762, // Mahendranagar
+            lng: 80.0204
+        }
     }
 ];

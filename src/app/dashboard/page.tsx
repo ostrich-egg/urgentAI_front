@@ -1,15 +1,27 @@
+
 "use client"
-import { useEffect, useState } from "react"
-import get_image from "@/lib/location_api";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { forwardGeoCoding, reverseGeoCoding } from "@/lib/geoCoding";
-// import { data, get_data_with_id, users } from "@/lib/database/dummy_db"
-import { get_all_data, get_data_with_id, get_all_initial_info } from "@/lib/database/dummy_db";
-import MapDynamic from "@/ui/index";
 import { IoIosSettings } from "react-icons/io";
 import { BiTransfer } from "react-icons/bi";
 import { TfiHeadphoneAlt } from "react-icons/tfi";
-
+import get_image from "@/lib/location_api";
+import { forwardGeoCoding, reverseGeoCoding } from "@/lib/geoCoding";
+import { get_data_with_id } from "@/lib/database/dummy_db";
+import MapDynamic from "@/ui/index";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    Bell,
+    AlertTriangle,
+    CheckCircle,
+    Clock,
+    MapPin,
+    MessageSquare,
+    Shield,
+    Flame,
+    Heart
+} from "lucide-react";
+import { resolve } from "path";
 
 export default function Page() {
 
@@ -23,45 +35,133 @@ export default function Page() {
         add2: string
     }
 
-    const [clickedId, setClickedId] = useState<number>(1);
+    const [clickedId, setClickedId] = useState<string>("2cfb651e59e44fbbb10aa62f0d9ff0be");
     const [open, setOpen] = useState<boolean>(false);
     const [imagelink, setImagelink] = useState<string>();
     const [location, setLocation] = useState<Location>({ add1: "Kathmandu", add2: "DurbarMarg" });
-    const [position, setPosition] = useState<Position>({ latitude: 27, longitude: 54 });
+    const [position, setPosition] = useState<Position>({ latitude: 29.6824, longitude: 80.5689 });
     const [usersData, setUsersData] = useState<any[]>([]);
     const [clickedData, setClickedData] = useState<any>();
     const [isClient, setIsClient] = useState<boolean>(false);
     const [transferClicked, setTransferClicked] = useState<boolean>(false);
     const [popupMessage, setPopupMessage] = useState<string>("");
     const [popupClass, setpopupClass] = useState<string>("bg-black");
+    const [resolved, setResolved] = useState<number>(0);
+
+
+    const severityColors = {
+        critical: "bg-red-600",
+        moderate: "bg-amber-500",
+        normal: "bg-emerald-500"
+    };
+
+    const getSeverityClass = (avg: number) => {
+        if (avg >= 6) return severityColors.critical;
+        if (avg < 6 && avg >= 4) return severityColors.moderate;
+        return severityColors.normal;
+    };
 
     const handleDispatch = (responder: string, style: string) => {
         setPopupMessage(`${responder} is dispatched to ${location.add2}`);
         setpopupClass(style);
         setTimeout(() => {
             setPopupMessage("");
-        }, 3000); // Hide popup after 3 seconds
+        }, 3000);
+
+        (async () => {
+            let response = await fetch(`https://brave-titmouse-primary.ngrok-free.app/recorded-data?session_id=${clickedId}`, {
+                method: "DELETE",
+            })
+            console.log("response is ", response)
+            if (response.ok) {
+                setUsersData(usersData.filter(each => each.session_id !== clickedId))
+                setResolved(prev => prev + 1);
+            }
+        })()
+
     };
 
-    // Set isClient to true once the component mounts
     useEffect(() => {
         setIsClient(true)
     }, [])
 
     async function handleLocation(located_at: Position) {
         let response = await reverseGeoCoding(located_at.latitude, located_at.longitude);
-        console.log("rs is ", response)
         setLocation(response);
     }
 
+
+    // useEffect(() => {
+    //     (async () => {
+    //         try {
+    //             // const response = await get_all_initial_info();
+    //             const response = await fetch("https://brave-titmouse-primary.ngrok-free.app/recorded-data", { "method": "GET", });
+    //             const data: DataItem[] = await response.json();
+    //             console.log("Received data:", data);
+    //             if (!response.ok) { throw new Error(`HTTP error! Status: ${response.status}`); }
+
+    //             const selectedUser = data.filter(each => each.session_id == clickedId);
+    //             console.log("selected user", selectedUser);
+
+    //             // const data = await response.json();
+    //             // Parse the JSON response
+    //             // const selectedUser = data.filter(each => each.session_id === clickedId)[0];
+    //             // setPosition(selectedUser?.located_at);
+    //             // handleLocation(selectedUser?.located_at);
+
+
+    //             // const users = await get_all_initial_info();
+    //             // console.log("Users:", users);
+    //             // setUsersData(users);
+    //             // const selectedUser = users.filter(each => each.session_id === clickedId)[0];
+    //             // setPosition(selectedUser?.located_at);
+    //             // handleLocation(selectedUser?.located_at);
+    //         } catch (error) {
+    //             console.error("Error during fetch:", error);
+    //         }
+    //     })()
+    // }, [])
+
     useEffect(() => {
-        (async () => {
-            const users = await get_all_initial_info();
-            setUsersData(users);
-            setPosition(users.filter(each => each.id == clickedId)[0]?.located_at);
-            handleLocation((users.filter(each => each.id == clickedId)[0]?.located_at))
-        })()
+        const fetchData = async () => {
+            try {
+                const response = await fetch("https://brave-titmouse-primary.ngrok-free.app/recorded-data", {
+                    method: "GET",
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data: DataItem[] = await response.json();
+                const RequiredData = data.filter(each => !each.unrated);
+                setUsersData(RequiredData)
+            } catch (error) {
+                console.error("Error during fetch:", error);
+            }
+        };
+
+        fetchData();
+
     }, [])
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const clickedData = usersData.filter(each => each.session_id == clickedId)[0];
+                console.log("Clicked data is ", clickedData);
+                setClickedData(clickedData)
+            } catch (error) {
+                console.error("Error during fetch:", error);
+            }
+        };
+
+        fetchData();
+    }, [clickedId])
 
     useEffect(() => {
         (async () => {
@@ -72,17 +172,9 @@ export default function Page() {
         })()
     }, [location])
 
-    useEffect(() => {
-        (async () => {
-            const response = await get_data_with_id(clickedId);
-            console.log("clicked response", response)
-            setClickedData(response);
-        })();
-    }, [clickedId]);
-
     function getSeverity(avg: number): string {
-        if (avg >= 7) return "critical";
-        if (avg < 7 && avg >= 4) return "moderate";
+        if (avg >= 6) return "critical";
+        if (avg < 6 && avg >= 4) return "moderate";
         return "normal";
     }
 
@@ -92,7 +184,6 @@ export default function Page() {
     }
 
     function handleTime(unix_time: number): string {
-        // const unixTimestamp = 1504095567183; // Unix timestamp in milliseconds
         const date = new Date(unix_time);
 
         const hours = date.getHours();
@@ -108,276 +199,220 @@ export default function Page() {
     }
 
     return isClient && (
-        <div className="w-full h-screen flex items-center justify-between ">
-
-            {/* Left list of emergency */}
-            <div className="ml-5 p-5 w-[25vw] text-foreground border-2 border-slate-50 h-[90vh] rounded-md bg-red-50 shadow-md overflow-auto scrollbar-hide">
-                <div className="flex justify-between px-2 py-5 border-b-2 shadow-sm mb-5">
-                    <span>Total <br /> {usersData.length}</span>
-                    <span>Critical <br /> {usersData.filter(each => each.average_serverity >= 7).length}</span>
-                    <span>Resolved <br /> {0}</span>
+        <div className="w-full h-screen bg-slate-50 p-4 flex items-center justify-between gap-4">
+            {/* Left Panel - Emergency List */}
+            <div className="w-[25vw] h-[90vh] bg-white rounded-xl shadow-lg overflow-hidden flex flex-col">
+                <div className="p-6 bg-gradient-to-r from-slate-800 to-slate-900 text-white">
+                    <h2 className="text-xl font-semibold mb-4">Emergency Dashboard</h2>
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-slate-800/50 p-3 rounded-lg text-center">
+                            <Bell className="w-5 h-5 mb-1 mx-auto" />
+                            <p className="text-sm opacity-75">Total</p>
+                            <p className="text-xl font-bold">{usersData.length}</p>
+                        </div>
+                        <div className="bg-red-500/20 p-3 rounded-lg text-center">
+                            <AlertTriangle className="w-5 h-5 mb-1 mx-auto" />
+                            <p className="text-sm opacity-75">Critical</p>
+                            <p className="text-xl font-bold">{usersData.filter(each => each.average_severity >= 6).length}</p>
+                        </div>
+                        <div className="bg-green-500/20 p-3 rounded-lg text-center">
+                            <CheckCircle className="w-5 h-5 mb-1 mx-auto" />
+                            <p className="text-sm opacity-75">Resolved</p>
+                            <p className="text-xl font-bold">{resolved}</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="flex flex-col gap-7 h-full w-full">
-                    {usersData.map(each_data => (
-                        <div
-                            className="actual_div border-2 px-5 py-2 rounded-md shadow-sm flex justify-between items-center"
-                            key={`${each_data.id}`}
-                            id={`${each_data.id}`}
-                            onClick={(_) => {
-                                setClickedId(each_data.id)
-                                handleLocation(usersData.filter(user => user.id == each_data.id)[0].located_at)
-                            }}
-                        >
-                            <div>
-                                <p>{each_data.short_description}</p>
-                                <span className="text-sm">{handleTime(each_data.time)}</span>
-                            </div>
-                            <span className={`text-white rounded-md px-3 ${getSeverity(each_data.average_serverity) == "critical" ? "bg-red-700" : getSeverity(each_data.average_serverity) == "moderate" ? "bg-red-400" : "bg-orange-300"}`}>{getSeverity(each_data.average_serverity)}</span>
-                        </div>
-                    ))
+                <div className="flex-1 overflow-auto p-4 space-y-3">
+                    {
+                        usersData.length > 0 ?
+                            usersData.map((each_data, index) => (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    key={index}
+                                    onClick={() => {
+                                        setClickedId(each_data.session_id);
+                                        handleLocation(usersData.filter(user => user.session_id == each_data.session_id)[0].located_at);
+                                    }}
+                                    className={`p-4 bg-white rounded-lg shadow-sm border-2 cursor-pointer transform transition-all duration-200 hover:scale-[1.02] ${clickedId === each_data.session_id ? "border-blue-500" : "border-transparent"
+                                        }`}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <p className="font-medium text-slate-800">{each_data.short_description}</p>
+                                            <div className="flex items-center mt-2 text-sm text-slate-500">
+                                                <Clock className="w-4 h-4 mr-1" />
+                                                <span>{handleTime(each_data.messages[0].sent_at)}</span>
+                                            </div>
+                                        </div>
+                                        <span className={`ml-3 px-3 py-1 rounded-full text-white text-sm ${getSeverityClass(each_data.average_severity)}`}>
+                                            {getSeverity(each_data.average_severity)}
+                                        </span>
+                                    </div>
+                                </motion.div>
+                            ))
+                            :
+                            <pre className="italic">No Data Yet!</pre>
                     }
                 </div>
             </div>
 
-
-            {/* mapComponent Section */}
-            <div className="w-[48%] h-[90vh] drop-shadow-md overflow-scroll scrollbar-hide">
+            {/* Center Panel - Map */}
+            <div className="flex-1 h-[90vh] rounded-xl shadow-lg overflow-hidden">
                 <MapDynamic client={position} />
             </div>
 
-            <div className="flex gap-0 relative">
-                {/* Right left */}
-                {open &&
-                    (<div className="p-5 mr-1 w-[25vw] text-foreground border-2 border-slate-50 h-[90vh] rounded-md bg-red-50 flex flex-col gap-7 shadow-md  overflow-scroll scrollbar-hide absolute top-0  right-[405px] z-[1001]">
-                        {
-                            open &&
-                            clickedData &&
-                            < div className="flex flex-col gap-5 text-foreground">
-                                <div className="w-full px-2 rounded-md shadow-sm flex flex-col gap-4 justify-center items-center">
-
-                                    <div className=" self-start">
-                                        {/* {data.filter(each => each.id == clickedId).map(item => ( */}
-                                        <div
-                                            className="px-2"
-                                            key={clickedData.id}
-                                        >
-                                            <h1 >{clickedData.short_description}</h1>
-                                            <span className={`text-white rounded-md px-3 ${getSeverity(clickedData.average_serverity) == "critical" ? "bg-red-700" : getSeverity(clickedData.average_serverity) == "moderate" ? "bg-red-400" : "bg-orange-300"}`}>{getSeverity(clickedData.average_serverity)}</span>
-                                        </div>
-                                        {/* ))} */}
-                                    </div>
-
-                                    < Image
-                                        src={imagelink || "/siren.png"}
-                                        alt={""}
-                                        height={300}
-                                        width={300}
-                                        className="object-cover  border-slate-50 border-8"
-                                        blurDataURL="Image on load"
-                                        placeholder="blur"
-                                    />
-                                </div>
-
-                                {/* {clickedData.filter(each => each.id == clickedId).map(item => ( */}
-                                <div
-                                    key={clickedData.id}
-                                    className="flex flex-col justify-around gap-3">
-                                    <div className="flex justify-between text-sm">
-                                        <span >
-                                            <span>lat: </span>
-                                            <span>{position.latitude}</span>
-                                        </span >
-                                        <span>
-                                            <span>lng: </span>
-                                            <span>{position.longitude}</span>
-                                        </span>
-                                    </div>
-
-                                    <div className="flex flex-col gap-3 ">
-                                        <div className="flex flex-col">
-                                            <span className="text-sm">Location : </span>
-                                            <span className="text-base">{location.add1}</span>
-                                        </div>
-
-                                        <div className="flex flex-col">
-                                            <span className="text-sm">Time :</span>
-                                            <span className="text-base">
-                                                {clickedData.messages[0].sent_at}
+            {/* Right Panel - Details & Chat */}
+            <div className="w-[25vw] h-[90vh] flex flex-col relative">
+                <div className="absolute -left-[400] z-[1000] w-[25vw] h-[90vh] overflow-scroll scrollbar-hide">
+                    <AnimatePresence >
+                        {open && (
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                className="bg-white rounded-xl shadow-lg p-6 "
+                            >
+                                {clickedData && (
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-lg font-semibold">{clickedData.short_description}</h3>
+                                            <span className={`px-3 py-1 rounded-full text-white text-sm ${getSeverityClass(clickedData.average_severity)}`}>
+                                                {getSeverity(clickedData.average_severity)}
                                             </span>
                                         </div>
-                                    </div>
-                                </div>
-                                {/* ))} */}
-                                <div className="text-base px-2 text-pretty  border-t-2 py-4 flex flex-col gap-2">
-                                    <span className="text-sm">Detail: </span>
-                                    {clickedData.description}
-                                </div>
 
-                                {/* Responder ui */}
-                                <div className="flex w-full flex-col space-y-2">
-                                    <p className="text-lg font-semibold">Dispatch first responders:</p>
+                                        <Image
+                                            src={imagelink || "/siren.png"}
+                                            alt=""
+                                            height={300}
+                                            width={300}
+                                            className="w-full h-48 object-cover rounded-lg"
+                                        />
 
-                                    <div className="mb-2 flex justify-between gap-1">
-                                        {/* Police Button */}
-                                        <button
-                                            className="inline-flex whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 text-primary-foreground h-10 py-2 max-w-fit flex-1 items-center justify-center rounded-md bg-blue-500 px-2 hover:bg-blue-600"
-                                            onClick={() => handleDispatch("Police", "bg-blue-500")}
-                                        >
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                width="24"
-                                                height="24"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                className="lucide lucide-siren mr-2"
-                                            >
-                                                <path d="M7 18v-6a5 5 0 1 1 10 0v6"></path>
-                                                <path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"></path>
-                                                <path d="M21 12h1"></path>
-                                                <path d="M18.5 4.5 18 5"></path>
-                                                <path d="M2 12h1"></path>
-                                                <path d="M12 2v1"></path>
-                                                <path d="m4.929 4.929.707.707"></path>
-                                                <path d="M12 12v6"></path>
-                                            </svg>
-                                            <p className="overflow-clip text-ellipsis">Police</p>
-                                        </button>
-
-                                        {/* Firefighters Button */}
-                                        <button
-                                            className="inline-flex whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 text-primary-foreground h-10 py-2 flex-1 items-center justify-center rounded-md bg-red-500 px-2 hover:bg-red-600"
-                                            onClick={() => handleDispatch("Firefighters", "bg-red-500")}
-                                        >
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                width="24"
-                                                height="24"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                className="lucide lucide-fire-extinguisher mr-2 min-w-fit"
-                                            >
-                                                <path d="M15 6.5V3a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v3.5"></path>
-                                                <path d="M9 18h8"></path>
-                                                <path d="M18 3h-3"></path>
-                                                <path d="M11 3a6 6 0 0 0-6 6v11"></path>
-                                                <path d="M5 13h4"></path>
-                                                <path d="M17 10a4 4 0 0 0-8 0v10a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2Z"></path>
-                                            </svg>
-                                            <p className="overflow-clip text-ellipsis">Firefighters</p>
-                                        </button>
-
-                                        {/* Paramedics Button */}
-                                        <button
-                                            className="inline-flex whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 text-primary-foreground h-10 py-2 flex-1 items-center justify-center rounded-md bg-green-500 px-2 hover:bg-green-600"
-                                            onClick={() => handleDispatch("Paramedics", "bg-green-500")}
-                                        >
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                width="24"
-                                                height="24"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                className="lucide lucide-ambulance mr-2"
-                                            >
-                                                <path d="M10 10H6"></path>
-                                                <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"></path>
-                                                <path d="M19 18h2a1 1 0 0 0 1-1v-3.28a1 1 0 0 0-.684-.948l-1.923-.641a1 1 0 0 1-.578-.502l-1.539-3.076A1 1 0 0 0 16.382 8H14"></path>
-                                                <path d="M8 8v4"></path>
-                                                <path d="M9 18h6"></path>
-                                                <circle cx="17" cy="18" r="2"></circle>
-                                                <circle cx="7" cy="18" r="2"></circle>
-                                            </svg>
-                                            <p className="overflow-clip text-ellipsis">Paramedics</p>
-                                        </button>
-                                    </div>
-
-                                    {popupMessage && (
-                                        <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 ${popupClass} text-white px-4 py-2 rounded-md shadow-md`}>
-                                            {popupMessage}
+                                        <div className="grid grid-cols-2 gap-4 text-sm">
+                                            <div className="flex items-center">
+                                                <MapPin className="w-4 h-4 mr-2 text-slate-400" />
+                                                <span>{location.add1}</span>
+                                            </div>
+                                            <div className="flex items-center">
+                                                <Clock className="w-4 h-4 mr-2 text-slate-400" />
+                                                <span>{handleTime(clickedData.messages[0].sent_at)}</span>
+                                            </div>
                                         </div>
-                                    )}
-                                </div>
-                                {/* Responder ui end*/}
+
+                                        <div className="p-4 bg-slate-50 rounded-lg">
+                                            <h4 className="text-sm font-medium mb-2">Details:</h4>
+                                            <p className="text-sm text-slate-600">{clickedData.description}</p>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <h4 className="font-medium">Dispatch First Responders:</h4>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <button
+                                                    onClick={() => handleDispatch("Police", "bg-blue-500")}
+                                                    className="flex flex-col items-center p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                                                >
+                                                    <Shield className="w-6 h-6 mb-1" />
+                                                    <span className="text-sm">Police</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDispatch("Firefighters", "bg-red-500")}
+                                                    className="flex flex-col items-center p-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                                                >
+                                                    <Flame className="w-6 h-6 mb-1" />
+                                                    <span className="text-sm">Fire</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDispatch("Paramedics", "bg-green-500")}
+                                                    className="flex flex-col items-center p-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                                                >
+                                                    <Heart className="w-6 h-6 mb-1" />
+                                                    <span className="text-sm">Medical</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
 
 
+                <div className="flex-1 bg-white rounded-xl shadow-lg flex flex-col">
+                    <div className="p-4 border-b flex items-center justify-between">
+                        <button
+                            onClick={() => setOpen(!open)}
+                            className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+                        >
+                            <IoIosSettings className={`w-6 h-6 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+                        </button>
+                        <span className="font-medium">{location.add2 || "Location N/A"}</span>
+                    </div>
 
-
-                            </div>
-
+                    <div className="flex-1 overflow-auto p-4 space-y-4">
+                        {
+                            clickedData ?
+                                clickedData.messages?.map((each: any, index: number) => (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        key={index}
+                                        className={`flex ${each.author === "bot" ? "justify-end" : "justify-start"}`}
+                                    >
+                                        <div
+                                            className={`max-w-[80%] rounded-lg p-3 ${each.author === "bot"
+                                                ? "bg-blue-500 text-white"
+                                                : "bg-slate-100 text-slate-800"
+                                                }`}
+                                        >
+                                            <p className="text-sm">{each.message}</p>
+                                            <span className="text-xs opacity-75 mt-1 block text-right">
+                                                {handleTime(each.sent_at)}
+                                            </span>
+                                        </div>
+                                    </motion.div>
+                                ))
+                                :
+                                <pre className="italic">No Data Yet!</pre>
                         }
                     </div>
-                    )
-                }
-
-
-                {/* Right right */}
-                <div className="mr-5  p-5 w-[25vw] text-foreground border-2 border-slate-50 h-[90vh] rounded-md bg-red-50 flex flex-col gap-7 shadow-md relative">
-                    <div className="flex justify-between px-2 pb-5 h-full mb-5 overflow-scroll scrollbar-hide ">
-                        <div
-                            className="h-full w-full"
-                            key={clickedData?.id}
-                        >
-                            <div className="flex justify-between items-center   mb-4  py-3 border-b- shadow-sm 2 " >
-                                <button className=" p-2 rounded-full  hover:scale-[0.9] text-[30px] font-black"
-                                    onClick={(e) => {
-                                        setOpen(!open)
-                                    }}
-                                >
-                                    <IoIosSettings className={`transition-transform duration-300 ${open ? "rotate-180" : "-rotate-180"
-                                        }`} />
-                                </button>
-                                <span className="text-[17px]">
-                                    {location.add2 || "NA"}
-                                </span>
-                            </div>
-                            <div className="flex flex-col gap-5">
-                                {clickedData?.messages?.map((each: any, index: number) =>
-                                (
-                                    <div
-                                        key={each.id}
-                                        className={`${each.author == "bot" ? "bg-blue-300 self-end" : "bg-white self-start"}   text-foreground px-5 py-2 rounded-lg w-[250px] flex flex-col`}>
-                                        <p>{each.message}</p>
-                                        <span className="text-[10px] self-end opacity-60">{each.sent_at}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-
 
                     <button
                         onClick={handelTransferButtonClick}
-                        className={` w-full h-[49px] ${!transferClicked ? "bg-green-600 text-white" : "bg-white text-black border-green-500"} text-white border border-slate-200 rounded-md p-2 absolute bottom-0 left-0`} >
-                        {transferClicked ?
-                            <div className="flex justify-center items-center gap-2 ">
-                                <TfiHeadphoneAlt />
-                                <p>Transfered to Human</p>
-                            </div>
-                            :
-                            <div className="flex justify-center items-center gap-2">
-                                < p>Transfer to Responder</p>
-                                <BiTransfer className="font-black" />
-
-                            </div>
-                        }
+                        className={`m-4 py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${transferClicked
+                            ? "bg-green-50 text-green-600 border-2 border-green-500"
+                            : "bg-green-500 text-white hover:bg-green-600"
+                            }`}
+                    >
+                        {transferClicked ? (
+                            <>
+                                <TfiHeadphoneAlt className="w-5 h-5" />
+                                <span>Transferred to Human</span>
+                            </>
+                        ) : (
+                            <>
+                                <span>Transfer to Responder</span>
+                                <BiTransfer className="w-5 h-5" />
+                            </>
+                        )}
                     </button>
-
                 </div>
-            </div >
-        </div >
-    )
+            </div>
+
+            {popupMessage && (
+                <motion.div
+                    initial={{ opacity: 0, y: -50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -50 }}
+                    className={`fixed top-4 left-1/2 transform -translate-x-1/2 ${popupClass} text-white px-6 py-3 rounded-lg shadow-lg z-[2000]`}
+                >
+                    {popupMessage}
+                </motion.div>
+            )}
+        </div>
+
+    );
 }
