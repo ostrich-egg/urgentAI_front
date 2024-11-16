@@ -106,7 +106,7 @@ export default function MapComponent({ client }) {
                 geocoder: L.Control.Geocoder.nominatim(),
                 createMarker: () => null,
             });
-            control.addTo(mapRef.current);
+            control?.addTo(mapRef?.current);
             routingControlRef.current = control;
 
             const routingContainer = document.querySelector(".leaflet-routing-container");

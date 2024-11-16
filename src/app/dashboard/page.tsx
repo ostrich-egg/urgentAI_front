@@ -22,6 +22,7 @@ import {
     Heart
 } from "lucide-react";
 import { resolve } from "path";
+import { send } from "process";
 
 export default function Page() {
 
@@ -69,6 +70,45 @@ export default function Page() {
         }, 3000);
 
         (async () => {
+
+            const message = {
+                embeds: [{
+                    title: `Urgent: ${clickedData.short_description}`,
+                    fields: [
+                        { name: "Latitude", value: String(position.latitude), inline: true },
+                        { name: "Longitude", value: String(position.longitude), inline: true },
+                        { name: "Address", value: location.add1 || "Not available" },
+                        { name: "Message", value: clickedData.description },
+                    ],
+                    color: 3447003,  // blue color
+                    timestamp: new Date().toISOString()
+                }]
+            };
+
+            let url = "";
+
+            if (responder == "Police")
+                url = `https://discord.com/api/webhooks/1307425607667286116/RcnI4aqBZeBy4tf_kbQaXSbgc8eqHDqSslMTiGu-_ZUS-6xa6y1Rw-sfq4AqP3OdYutO`
+            else if (responder == "Firefighters")
+                url = `https://discord.com/api/webhooks/1307426074736463964/2CbD6018fgzM_Kni-8HK00TJ32DxbRpNSUkmjW1r1MTdttX9oCy3nUGQ4sx-9Ofd1gMr`
+
+            else
+                url = `https://discord.com/api/webhooks/1307426333806301256/0Fg6PAJ9G13ddShoOl04wjBfesU8rQ9vP9tnf-2SiS-IfXqH6STl8EEwLJ_eAd7hnGHL`
+
+            const discord_response = await fetch(url, {
+                method: "POST",
+                headers:
+                {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(message)
+            })
+
+            if (!discord_response.ok) {
+                const errorText = await discord_response.text();
+                console.log("Discord api erorr ", errorText);
+            }
+
             let response = await fetch(`https://brave-titmouse-primary.ngrok-free.app/recorded-data?session_id=${clickedId}`, {
                 method: "DELETE",
             })
@@ -91,36 +131,6 @@ export default function Page() {
     }
 
 
-    // useEffect(() => {
-    //     (async () => {
-    //         try {
-    //             // const response = await get_all_initial_info();
-    //             const response = await fetch("https://brave-titmouse-primary.ngrok-free.app/recorded-data", { "method": "GET", });
-    //             const data: DataItem[] = await response.json();
-    //             console.log("Received data:", data);
-    //             if (!response.ok) { throw new Error(`HTTP error! Status: ${response.status}`); }
-
-    //             const selectedUser = data.filter(each => each.session_id == clickedId);
-    //             console.log("selected user", selectedUser);
-
-    //             // const data = await response.json();
-    //             // Parse the JSON response
-    //             // const selectedUser = data.filter(each => each.session_id === clickedId)[0];
-    //             // setPosition(selectedUser?.located_at);
-    //             // handleLocation(selectedUser?.located_at);
-
-
-    //             // const users = await get_all_initial_info();
-    //             // console.log("Users:", users);
-    //             // setUsersData(users);
-    //             // const selectedUser = users.filter(each => each.session_id === clickedId)[0];
-    //             // setPosition(selectedUser?.located_at);
-    //             // handleLocation(selectedUser?.located_at);
-    //         } catch (error) {
-    //             console.error("Error during fetch:", error);
-    //         }
-    //     })()
-    // }, [])
 
     useEffect(() => {
         const fetchData = async () => {
