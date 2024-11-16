@@ -113,9 +113,9 @@ function Page() {
 
   useEffect(() => {
     const websocket = new WebSocket(
-      "wss://brave-titmouse-primary.ngrok-free.app/prompt-ws"
+      "wss://brave-titmouse-primary.ngrok-free.app/prompt-ws?lang=ne"
     );
-
+//भुकम्प आयो, भवनहरु भत्किदै छ, सहयोग गरौ
     websocket.onopen = () => {
       console.log("connected");
       if (sessionId) {
