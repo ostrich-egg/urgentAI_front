@@ -341,18 +341,19 @@ export default function Page() {
                 </div>
 
 
-                <div className="flex-1 bg-white rounded-xl shadow-lg flex flex-col">
-                    <div className="p-4 border-b flex items-center justify-between">
-                        <button
-                            onClick={() => setOpen(!open)}
-                            className="p-2 rounded-full hover:bg-slate-100 transition-colors"
-                        >
-                            <IoIosSettings className={`w-6 h-6 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
-                        </button>
-                        <span className="font-medium">{location.add2 || "Location N/A"}</span>
-                    </div>
+                <div className="p-4 border-b flex items-center justify-between">
+                    <button
+                        onClick={() => setOpen(!open)}
+                        className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+                    >
+                        <IoIosSettings className={`w-6 h-6 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
+                    </button>
+                    <span className="font-medium">{location.add2 || "Location N/A"}</span>
+                </div>
 
-                    <div className="flex-1 overflow-auto p-4 space-y-4">
+                <div className="flex-1 bg-white rounded-xl shadow-lg flex flex-col h-[90vh] overflow-scroll scrollbar-hide">
+
+                    <div className="flex-1  p-4 space-y-4 ">
                         {
                             clickedData ?
                                 clickedData.messages?.map((each: any, index: number) => (
@@ -380,26 +381,29 @@ export default function Page() {
                         }
                     </div>
 
-                    <button
-                        onClick={handelTransferButtonClick}
-                        className={`m-4 py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${transferClicked
-                            ? "bg-green-50 text-green-600 border-2 border-green-500"
-                            : "bg-green-500 text-white hover:bg-green-600"
-                            }`}
-                    >
-                        {transferClicked ? (
-                            <>
-                                <TfiHeadphoneAlt className="w-5 h-5" />
-                                <span>Transferred to Human</span>
-                            </>
-                        ) : (
-                            <>
-                                <span>Transfer to Responder</span>
-                                <BiTransfer className="w-5 h-5" />
-                            </>
-                        )}
-                    </button>
+
                 </div>
+
+                <button
+                    onClick={handelTransferButtonClick}
+                    className={`m-4 py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors ${transferClicked
+                        ? "bg-green-50 text-green-600 border-2 border-green-500"
+                        : "bg-green-500 text-white hover:bg-green-600"
+                        }`}
+                >
+                    {transferClicked ? (
+                        <>
+                            <TfiHeadphoneAlt className="w-5 h-5" />
+                            <span>Transferred to Human</span>
+                        </>
+                    ) : (
+                        <>
+                            <span>Transfer to Responder</span>
+                            <BiTransfer className="w-5 h-5" />
+                        </>
+                    )}
+                </button>
+
             </div>
 
             {popupMessage && (
