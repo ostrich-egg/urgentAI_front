@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { FaMicrophone } from "react-icons/fa6";
-import { users, data } from '@/lib/database/dummy_db'
 import dynamic from 'next/dynamic';
 
 
@@ -34,11 +33,6 @@ function page() {
     // }
 
     function handleSpeechRecognition(target_elm: any) {
-
-        // if (typeof window == undefined) {
-        //     console.log("Speech recogination can only run on client. Error occured")
-        //     return;
-        // }
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
@@ -126,7 +120,7 @@ function page() {
                         className='flex justify-center items-center p-2 ml-2 border-2 border-slate-300 rounded-full bg-slate-200 hover:bg-slate-300 hover:text-black  hover:transition-all hover:duration-1000'
                         onClick={handleMicVoice}
                     >
-                        <div ref={micRef}
+                        < div ref={micRef}
                         >
                             <FaMicrophone className='mic_itself' />
                         </div>

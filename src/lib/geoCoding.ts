@@ -1,23 +1,17 @@
-
-
-export const reverseGeoCoding = async (server_lat: number, server_long: number): Promise<string> => {
-    let response = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${server_lat}%2C${server_long}&key=72d397af64c14f3c9aa580ae21e5c5b1`, {
+export const reverseGeoCoding = async (lat: number, lng: number): Promise<{ add1: string, add2: string }> => {
+    console.log("reverse", lat, lng)
+    const response = await fetch(`https://api.geoapify.com/v1/geocode/reverse?lat=${lat}&lon=${lng}&apiKey=bb5bec5723c84b63a1e89ad7912e248e`, {
         method: "GET"
     });
-
-    let data = await response.json();
-    return data.results[0].formatted;
-
+    const data = await response.json();
+    console.log('data got ', data)
+    return { add1: data.features[0].properties?.address_line2, add2: data.features[0].properties?.address_line1 };
 }
 
-export const forwardGeoCoding = async (location: string, country: string = "Nepal"): Promise<{ lat: number, lng: number }> => {
-
-
-    let response = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${location}%2C${country}&key=72d397af64c14f3c9aa580ae21e5c5b1`, {
+export const forwardGeoCoding = async (location: string, country: string = "Nepal"): Promise<{ latitude: number, longitude: number }> => {
+    const response = await fetch(`https://api.geoapify.com/v1/geocode/search?text=${location}%2C%20${country}&format=json&apiKey=bb5bec5723c84b63a1e89ad7912e248e`, {
         method: "GET"
     });
-
-    let data = await response.json();
-    return data.results[0].geometry;
-
+    const data = await response.json();
+    return { latitude: data.results[0].lat, longitude: data.results[0].lon };
 }

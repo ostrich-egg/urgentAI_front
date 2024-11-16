@@ -23,7 +23,7 @@ export default function RootLayout({
 
       </head>
       <body
-        className={`${kanit.className} antialiased text-[19px] bg-background scroll-m-0`}
+        className={`${kanit.className} antialiased text-[19px] bg-background scroll-m-0 `}
       >
         {children}
       </body>

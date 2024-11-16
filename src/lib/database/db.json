@@ -1,0 +1,31 @@
+[
+    {
+        "id": 1,
+        "session_id": "session_123",
+        "average_serverity": 5,
+        "short_description": "Test Description",
+        "description": "Detailed description here.",
+        "located_at": {
+            "latitude": 45,
+            "longitude": -73
+        },
+        "messages": [
+            {
+                "id": 1,
+                "message": "Sample message",
+                "audio": "audio_file_path",
+                "author": "John Doe",
+                "sequence": 1,
+                "sent_at": "2024-11-15"
+            },
+            {
+                "id": 2,
+                "message": "Sample message",
+                "audio": "audio_file_path",
+                "author": "John Roe",
+                "sequence": 2,
+                "sent_at": "2024-11-16"
+            }
+        ]
+    }
+]
