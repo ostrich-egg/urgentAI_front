@@ -6,6 +6,37 @@ import React, { useState, useRef, useEffect } from "react";
 import { FaMicrophone } from "react-icons/fa6";
 import { users, data } from "@/lib/database/dummy_db";
 import dynamic from "next/dynamic";
+import { whereAmI } from "@/lib/getLocation";
+import {
+  Send,
+  Phone,
+  MapPin,
+  BadgeIcon as Police,
+  Clock,
+  AlertTriangle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+
+import WavEncoder from "wav-encoder";
+
+import markdownit from "markdown-it";
+
+import DOMPurify from "dompurify";
+
+import MapDynamic from "@/ui/index";
+
+const md = markdownit();
+
+type PoliceUnit = {
+  id: number;
+  latitude: number;
+  longitude: number;
+  eta: number;
+};
 
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 
@@ -33,14 +64,215 @@ function sendToBackend(encodedData: string) {
     });
 }
 
+type Position = {
+  latitude: number;
+  longitude: number;
+};
+
 function Page() {
-  type Message = {
-    msg: string;
-    time: string;
+  let position: Position = { latitude: 0, longitude: 0 };
+
+  useEffect(() => {
+    async function get() {
+      const r = await whereAmI();
+      console.log(r);
+      position = { latitude: r[0], longitude: r[1] };
+    }
+    get();
+  }, []);
+
+  // Function to render sanitized HTML from Markdown
+  const renderMarkdown = (text: any) => {
+    const renderedHtml = md.render(text || ""); // Convert Markdown to HTML
+    const sanitizedHtml = DOMPurify.sanitize(renderedHtml); // Sanitize for safety
+    return <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />;
   };
-  const placeholder1 = ["Search ........................"];
-  const [messages, setMessages] = useState<string>("");
-  const [MessageArray, setMessageArray] = useState<Message[]>([]);
+
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [sessionId, setSessionId] = useState(() =>
+    localStorage.getItem("session_id")
+  );
+  const [newMessage, setNewMessage] = useState("");
+
+  type Message = {
+    id: number;
+    text?: string;
+    audio?: Blob;
+    sender: "user" | "ai";
+    timestamp: Date;
+  };
+
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 1,
+      text: "911, what's your emergency?",
+      sender: "ai",
+      timestamp: new Date(),
+    },
+  ]);
+
+  useEffect(() => {
+    const websocket = new WebSocket(
+      "wss://brave-titmouse-primary.ngrok-free.app/prompt-ws"
+    );
+
+    websocket.onopen = () => {
+      console.log("connected");
+      if (sessionId) {
+        websocket.send(
+          JSON.stringify({ type: "RECONNECT_SESSION", session: sessionId })
+        );
+      } else {
+        console.log("posi", position);
+        websocket.send(
+          JSON.stringify({ type: "REQUEST_SESSION", located_at: position })
+        );
+      }
+    };
+
+    websocket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("Received:", data);
+
+      const receivedMessage: Message = {
+        id: Date.now(),
+        text: data.msg,
+        sender: "ai",
+        timestamp: new Date(),
+      };
+
+      switch (data.type) {
+        case "SESSION_CREATED":
+          localStorage.setItem("sessionId", data.session);
+          setSessionId(data.session);
+          break;
+
+        case "SESSION_RECONNECTED":
+          setMessages(data.messages || []);
+          break;
+
+        case "COMMUNICATE_ACK":
+          setMessages((prev) => [...prev, receivedMessage]);
+          break;
+
+        case "ANY_ERROR":
+          console.error("Error:", data.error);
+          break;
+
+        default:
+          console.warn("Unhandled message type:", data.type);
+      }
+    };
+
+    websocket.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
+
+    setWs(websocket);
+
+    return () => {
+      websocket.close();
+    };
+  }, []);
+
+  const sendMessage = () => {
+    if (ws && sessionId) {
+      ws.send(
+        JSON.stringify({
+          type: "COMMUNICATE",
+          session: sessionId,
+          msg: newMessage,
+          author: "user",
+          audio: null,
+        })
+      );
+      setNewMessage("");
+
+      if (newMessage.trim()) {
+        const userMessage: Message = {
+          id: messages.length + 1,
+          text: newMessage,
+          sender: "user",
+          timestamp: new Date(),
+        };
+        setMessages([...messages, userMessage]);
+        setNewMessage("");
+      }
+    }
+  };
+
+  const [isTyping, setIsTyping] = useState(false);
+  const [policeUnits, setPoliceUnits] = useState<PoliceUnit[]>([
+    { id: 1, latitude: 40.7128, longitude: -74.006, eta: 5 },
+    { id: 2, latitude: 40.7138, longitude: -74.007, eta: 7 },
+    { id: 3, latitude: 40.7118, longitude: -74.005, eta: 10 },
+  ]);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const handleSend = () => {
+    if (newMessage.trim()) {
+      const userMessage: Message = {
+        id: messages.length + 1,
+        text: newMessage,
+        sender: "user",
+        timestamp: new Date(),
+      };
+      setMessages([...messages, userMessage]);
+      setNewMessage("");
+      simulateAIResponse(userMessage);
+    }
+  };
+
+  const simulateAIResponse = (userMessage: Message) => {
+    setIsTyping(true);
+    setTimeout(() => {
+      const aiMessage: Message = {
+        id: messages.length + 2,
+        text: generateAIResponse("fire"),
+        sender: "ai",
+        timestamp: new Date(),
+      };
+      setMessages((prevMessages) => [...prevMessages, aiMessage]);
+      setIsTyping(false);
+      updatePoliceUnits();
+    }, 1500);
+  };
+
+  const generateAIResponse = (userMessage: string) => {
+    // This is a simple simulation. In a real scenario, you'd use a more sophisticated AI model.
+    if (userMessage.toLowerCase().includes("fire")) {
+      return "I understand there's a fire. Can you provide the exact location? I'm dispatching firefighters to your area.";
+    } else if (userMessage.toLowerCase().includes("medical")) {
+      return "I'm sending an ambulance to your location. Can you describe the medical emergency?";
+    } else {
+      return "I've alerted the police. They're on their way. Can you provide more details about the situation?";
+    }
+  };
+
+  const updatePoliceUnits = () => {
+    setPoliceUnits((prevUnits) =>
+      prevUnits.map((unit) => ({
+        ...unit,
+        eta: Math.max(0, unit.eta - 1),
+      }))
+    );
+  };
+
+  const formatTime = (date: Date | undefined) => {
+    if (!date || !(date instanceof Date)) return "Invalid Time";
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const placeholder1 = ["Message"];
+  const [MessageArray, setMessageArray] = useState<
+    { msg: Message[]; time: string }[]
+  >([]);
   const [recognizing, setRecognizing] = useState<boolean>(false);
   const micRef = useRef<HTMLDivElement>(null);
   const [isClient, setIsClient] = useState<boolean>(false);
@@ -71,6 +303,7 @@ function Page() {
 
     let mediaRecorder: MediaRecorder | null = null;
     let audioChunks: Blob[] = [];
+    let recognizedText: string | null = null;
 
     // Start Recording Audio
     navigator.mediaDevices
@@ -88,34 +321,19 @@ function Page() {
           // Combine all chunks into one Blob
           const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
           console.log("Audio blob created:", audioBlob);
+          console.log(recognizedText);
+          convertToWavAndSend(audioBlob, recognizedText);
 
-          // Convert the combined Blob into Base64
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64Audio = reader.result?.toString().split(",")[1]; // Extract base64 string
-            console.log("Base64 audio:", base64Audio);
-
-            // Send base64 data to the server
-            /*
-                        fetch('/api/speech/audio', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ audio: base64Audio }),
-                        })
-                        .then((response) => response.json())
-                        .then((data) => {
-                            console.log('Base64 Audio Sent Successfully:', data);
-                        })
-                        .catch((error) => {
-                            console.error('Error Sending Base64 Audio:', error);
-                        });
-                        */
+          const newMessage: Message = {
+            id: messages.length + 1,
+            audio: audioBlob,
+            sender: "user",
+            timestamp: new Date(),
           };
-          reader.readAsDataURL(audioBlob); // Convert Blob to Base64
+          setMessages((prev) => [...prev, newMessage]);
 
-          // Clear audioChunks
+          simulateAIResponse(newMessage);
+
           audioChunks = [];
         };
 
@@ -152,11 +370,62 @@ function Page() {
         if (event.results[i].isFinal) {
           const data = event.results[i][0].transcript;
           console.log("Recognized text:", data);
+          recognizedText = data;
         }
       }
     };
 
     recognition.start();
+  }
+
+  async function convertToWavAndSend(audioBlob: Blob, text: string | null) {
+    try {
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const audioContext = new AudioContext();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      const wavData = WavEncoder.encode({
+        sampleRate: audioBuffer.sampleRate,
+        channelData: [audioBuffer.getChannelData(0)], // Single channel for mono
+      });
+
+      const wavDataBuffer = await wavData;
+      const wavBlob = new Blob([wavDataBuffer], { type: "audio/wav" });
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64Audio = reader.result?.toString().split(",")[1];
+        sendAudioAndTextToBackend(base64Audio, text);
+      };
+      reader.readAsDataURL(wavBlob);
+    } catch (error) {
+      console.error("Error converting to WAV:", error);
+    }
+  }
+
+  function sendAudioAndTextToBackend(
+    base64Audio: string | undefined,
+    text: string | null
+  ) {
+    if (!base64Audio) {
+      console.error("No audio data to send");
+      return;
+    }
+
+    console.log(base64Audio);
+    console.log(text);
+
+    if (ws && sessionId) {
+      ws.send(
+        JSON.stringify({
+          type: "COMMUNICATE",
+          session: sessionId,
+          msg: text,
+          author: "user",
+          audio: base64Audio,
+        })
+      );
+    }
   }
 
   function handleMicVoice(event: any) {
@@ -173,7 +442,7 @@ function Page() {
     }).format(new Date());
 
     setMessageArray((prev) => [...prev, { msg: messages, time }]);
-    setMessages("");
+    setMessages([]);
   }
 
   useEffect(() => {
@@ -182,42 +451,151 @@ function Page() {
 
   return (
     isClient && (
-      <div className="flex justify-center items-center h-full w-full">
-        <div className="mr-5  p-5 w-[50vw] text-foreground border-2 border-slate-50 h-screen rounded-md bg-red-50 flex flex-col gap-7 shadow-md relative">
-          <div className="w-full border-b-2 border-slate-200 pb-2">
-            <h1 className="font-black text-pretty text-foreground ">
-              UrgentAI.
-            </h1>
-            <p className="text-xs text-slate-400">We are ready to help you</p>
+      <div
+        style={{ height: "100vh" }}
+        className="flex space-x-5 w-full p-5  rounded-lg shadow-5xl bg-background"
+      >
+        <div className="flex flex-col w-2/3 border shadow-2xl  rounded-2xl ">
+          <div
+            className=" p-4 border-b bg-red-100 "
+            style={{
+              borderTopLeftRadius: "15px",
+              borderTopRightRadius: "15px",
+              borderBottomLeftRadius: "0",
+              borderBottomRightRadius: "0",
+            }}
+          >
+            <h2 className=" text-lg font-semibold flex items-center">
+              <Phone className="mr-2 h-5 w-5 text-red-600 animate-pulse" />
+              Emergency AI Support
+            </h2>
           </div>
+          <ScrollArea className="flex-grow p-4" ref={scrollAreaRef}>
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${
+                  message.sender === "user" ? "justify-end" : "justify-start"
+                } mb-4`}
+              >
+                {/* AI Profile Picture */}
+                {message.sender === "ai" && (
+                  <div className="mr-2 flex-shrink-0">
+                    <img
+                      src="/img/chatbot.png" // Replace with your AI profile picture URL
+                      alt="AI Profile"
+                      className="w-8 h-8 rounded-full"
+                    />
+                  </div>
+                )}
 
-          {MessageArray.map((each, index) => (
-            <div
-              key={index}
-              className="flex flex-col p-4 border-2 border-slate-200 text-blue-500 rounded-lg  w-[350px] self-end"
-            >
-              <p>{each?.msg}</p>
-              <span className="text-xs text-slate-400 self-end">
-                {each.time}
-              </span>
+                {/* Message Content */}
+                <div
+                  className={`max-w-[70%] rounded-lg p-3 ${
+                    message.sender === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground"
+                  }`}
+                >
+                  {/* Text Message */}
+                  {message.text && renderMarkdown(message.text)}
+
+                  {/* Audio Message */}
+                  {message.audio && (
+                    <audio controls className=" w-[200px]">
+                      <source
+                        src={URL.createObjectURL(message.audio)}
+                        type="audio/mpeg"
+                      />
+                      Your browser does not support the audio element.
+                    </audio>
+                  )}
+
+                  {/* Timestamp */}
+                  <div className="flex justify-between items-center mt-2">
+                    <p
+                      className={`text-xs ${
+                        message.sender === "user"
+                          ? "text-primary-foreground/70"
+                          : "text-secondary-foreground/70"
+                      }`}
+                    >
+                      {formatTime(message.timestamp)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {isTyping && (
+              <div className="flex justify-start mb-4">
+                <div className="bg-secondary text-secondary-foreground rounded-lg p-3">
+                  <p className="text-sm">AI is typing...</p>
+                </div>
+              </div>
+            )}
+          </ScrollArea>
+          <div className="p-4 border-t">
+            <div className=" bottom-0 w-full right-0 flex justify-center items-center">
+              <div
+                className="flex justify-center items-center p-4 ml-2 border-slate-300 rounded-full bg-slate-200 hover:bg-slate-300 hover:text-black  hover:transition-all hover:duration-1000"
+                onClick={handleMicVoice}
+              >
+                <div ref={micRef}>
+                  <FaMicrophone className="mic_itself" />
+                </div>
+              </div>
+              <PlaceholdersAndVanishInput
+                placeholders={placeholder1}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onSubmit={sendMessage}
+              />
             </div>
-          ))}
+          </div>
+        </div>
 
-          <div className="absolute bottom-0 w-full p-5 right-0 flex justify-center items-center">
-            <div
-              className="flex justify-center items-center p-4 ml-2 mr-2  border-slate-300 rounded-full bg-slate-200 hover:bg-slate-300 hover:text-black  hover:transition-all hover:duration-1000"
-              onClick={handleMicVoice}
-            >
-              <div ref={micRef}>
-                <FaMicrophone className="mic_itself" />
+        <div className="flex flex-col space-y-10 w-1/3 p-4  ">
+          <div>
+            <h3 className="text-lg font-semibold mb-4">
+              Emergency Response Map
+            </h3>
+            <div className="bg-gray-300 dark:bg-gray-700 h-64 mb-4 mt-5 rounded-lg flex items-center justify-center">
+              <MapPin className="h-8 w-8 text-red-500" />
+              {/* In a real application, you would integrate an actual map here */}
+              <span className="ml-2 text-sm">Map Placeholder</span>
+            </div>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-2">Nearby Police Units</h4>
+            {policeUnits.map((unit) => (
+              <div
+                key={unit.id}
+                className="mb-2 p-2 mt-5 bg-white dark:bg-gray-900 rounded-lg shadow"
+              >
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <Police className="h-4 w-4 mr-2" />
+                    <span className="text-sm font-medium">Unit {unit.id}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <Clock className="h-4 w-4 mr-1" />
+                    <span className="text-sm">{unit.eta} min</span>
+                  </div>
+                </div>
+                <Progress
+                  value={100 - (unit.eta / 10) * 100}
+                  className="mt-2"
+                />
+              </div>
+            ))}
+            <div className="mt-4 p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
+              <div className="flex items-center">
+                <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2" />
+                <span className="text-sm font-medium">
+                  High Alert: Multiple Units Dispatched
+                </span>
               </div>
             </div>
-            <PlaceholdersAndVanishInput
-              placeholders={placeholder1}
-              onChange={(e) => setMessages(e.target.value)}
-              onSubmit={handleButtonClicked}
-            />
-            {/* <button className='bg-slate-400 h-full border-2 rounded-md px-3 py-2 text-foreground'>Send</button> */}
           </div>
         </div>
       </div>
