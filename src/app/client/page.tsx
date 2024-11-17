@@ -22,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { formatChatMessage } from "@/lib/parse";
+import { getData } from "@/lib/temp";
 
 import WavEncoder from "wav-encoder";
 
@@ -74,16 +75,18 @@ type Position = {
 
 function Page() {
   let position: Position = { latitude: 0, longitude: 0 };
+  const [location, setLocation] = useState<Position | null>(null);
 
   useEffect(() => {
     async function get() {
       const r = await whereAmI();
       console.log(r);
-      // position = { latitude: r[0], longitude: r[1] };
+       position = { latitude: r[0], longitude: r[1] };
       // 28.9985° N, 83.8473° E mustang
       // 26.8065° N, 87.2847° E dharan
       // 28.2964° N, 84.8568° E gorkha
-      position = { latitude: 26.8065, longitude: 87.2847 }
+      // position = { latitude: 26.8065, longitude: 87.2847 }
+      setLocation(position);
 
     }
     get();
@@ -121,7 +124,7 @@ function Page() {
 
   useEffect(() => {
     const websocket = new WebSocket(
-      "wss://brave-titmouse-primary.ngrok-free.app/prompt-ws?lang=ne"
+      "wss://brave-titmouse-primary.ngrok-free.app/prompt-ws"
     );
 
     websocket.onopen = () => {
@@ -135,6 +138,7 @@ function Page() {
         websocket.send(
           JSON.stringify({ type: "REQUEST_SESSION", located_at: position })
         );
+        
       }
     };
 
@@ -151,7 +155,7 @@ function Page() {
 
       switch (data.type) {
         case "SESSION_CREATED":
-          localStorage.setItem("sessionId", data.session);
+          localStorage.setItem("session_id", data.session);
           setSessionId(data.session);
           break;
 
@@ -211,10 +215,20 @@ function Page() {
 
   const [isTyping, setIsTyping] = useState(false);
   const [policeUnits, setPoliceUnits] = useState<PoliceUnit[]>([
-    { id: 1, latitude: 40.7128, longitude: -74.006, eta: 5 },
-    { id: 2, latitude: 40.7138, longitude: -74.007, eta: 7 },
-    { id: 3, latitude: 40.7118, longitude: -74.005, eta: 10 },
+    { id: 1, latitude: 40.7128, longitude: -74.006, eta: 0 },
+    { id: 2, latitude: 40.7138, longitude: -74.007, eta: 0 },
+    { id: 3, latitude: 40.7118, longitude: -74.005, eta: 0 },
   ]);
+
+  useEffect(() => {
+    const data = getData();
+    if(data){
+      setPoliceUnits([{ id: 1, latitude: 40.7128, longitude: -74.006, eta: 10 }]);
+    }
+
+  }, []);
+
+
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const handleSend = () => {
@@ -560,12 +574,10 @@ function Page() {
               Emergency Response Map
             </h3>
             <div className="bg-gray-300 dark:bg-gray-700 h-64 mb-4 mt-5 rounded-lg flex items-center justify-center">
-              <MapPin className="h-8 w-8 text-red-500" />
-              {
-                // location && <MapComponent client={location} />
-                // map goes here
-              }
-              <span className="ml-2 text-sm">Map Placeholder</span>
+              
+            <div className="h-full w-full rounded-xl shadow-lg ">
+                <MapDynamic client={location} />
+            </div>
             </div>
           </div>
           <div>

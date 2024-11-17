@@ -24,6 +24,9 @@ import {
 import { resolve } from "path";
 import { send } from "process";
 
+import { setData } from '@/lib/temp';
+
+
 export default function Page() {
 
     type Position = {
@@ -63,6 +66,7 @@ export default function Page() {
     };
 
     const handleDispatch = (responder: string, style: string) => {
+        setData({ status: true });
         setPopupMessage(`${responder} is dispatched to ${location.add2}`);
         setpopupClass(style);
         setTimeout(() => {

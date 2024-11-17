@@ -69,6 +69,7 @@ export default function MapComponent({ client }) {
                 lng: client.longitude
             });
         }
+        console.log(clientLocation);
     }, [client]);
 
     useEffect(() => {
@@ -123,7 +124,7 @@ export default function MapComponent({ client }) {
     }, [clientLocation, nearestStation]);
 
     if (!clientLocation || !nearestStation) return <div className="w-full h-full flex items-center justify-center">Loading map...</div>;
-
+    console.log(clientLocation, nearestStation);
     return (
         <div className="w-full h-full relative">
             <MapContainer
