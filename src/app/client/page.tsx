@@ -124,7 +124,7 @@ function Page() {
 
   useEffect(() => {
     const websocket = new WebSocket(
-      "wss://brave-titmouse-primary.ngrok-free.app/prompt-ws"
+      "ws://192.168.26.163:7878/prompt-ws"
     );
 
     websocket.onopen = () => {
