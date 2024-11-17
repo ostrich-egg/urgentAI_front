@@ -52,6 +52,8 @@ export default function Page() {
     const [popupClass, setpopupClass] = useState<string>("bg-black");
     const [resolved, setResolved] = useState<number>(0);
 
+    const api_endpoint = "http://192.168.26.163:7878/recorded-data";
+
 
     const severityColors = {
         critical: "bg-red-600",
@@ -113,7 +115,7 @@ export default function Page() {
                 console.log("Discord api erorr ", errorText);
             }
 
-            let response = await fetch(`https://brave-titmouse-primary.ngrok-free.app/recorded-data?session_id=${clickedId}`, {
+            let response = await fetch(`${api_endpoint}?session_id=${clickedId}`, {
                 method: "DELETE",
             })
             console.log("response is ", response)
@@ -139,7 +141,7 @@ export default function Page() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch("https://brave-titmouse-primary.ngrok-free.app/recorded-data", {
+                const response = await fetch(`${api_endpoint}`, {
                     method: "GET",
                     headers: {
                         'Accept': 'application/json',
